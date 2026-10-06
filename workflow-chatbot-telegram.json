@@ -1,0 +1,125 @@
+{
+  "name": "Bot de Clima no Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "c1b90572-9e6d-44c2-b809-8123934e4d84",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [-760, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d486d1f-01e4-45c7-93d7-c198b4de6831",
+              "name": "queue",
+              "value": "={{ ($json.message.text || '').trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c7274edb-d620-48af-918d-cae747851db9",
+      "name": "Preparar consulta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-540, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "q", "value": "={{ $json.queue }}"},
+            {"name": "units", "value": "metric"},
+            {"name": "lang", "value": "pt_br"},
+            {"name": "appid", "value": "={{ $env.OPENWEATHER_API_KEY }}"}
+          ]
+        },
+        "options": {"response": {"response": {"neverError": true, "responseFormat": "json"}}}
+      },
+      "id": "ab622e69-a9b5-48a3-9980-75233207a07c",
+      "name": "Consultar OpenWeather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-300, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const response = $input.first()?.json ?? {};\nconst erro = '❌ Cidade não encontrada. Use o formato Cidade,UF,BR (ex.: São Paulo,SP,BR).';\nlet ok = false;\nlet message = erro;\nconst code = Number(response.cod ?? response.statusCode ?? 200);\nconst temp = Number(response.main?.temp);\nconst city = String(response.name ?? '').trim();\nif (!response.error && code === 200 && city && Number.isFinite(temp)) {\n  ok = true;\n  message = `🌤️ A temperatura em ${city} é de ${Math.round(temp)}°C.`;\n}\nreturn [{ json: { ok, message } }];"
+      },
+      "id": "f95549d4-aa60-4b89-9bce-c8d76cfef6f4",
+      "name": "Validar e formatar resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [
+            {"id": "83d88ff5-0746-422f-a5c5-16090caa9d59", "leftValue": "={{ $json.ok }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true", "singleValue": true}}
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3dc59529-2ffb-4bf9-99e9-cbecced8024a",
+      "name": "Cidade encontrada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [180, 0]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {"appendAttribution": false}
+      },
+      "id": "2c130244-f197-45bc-9cb7-2d339aa35d3d",
+      "name": "Enviar temperatura",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [440, -100]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {"appendAttribution": false}
+      },
+      "id": "1894f6f7-8891-4736-9735-92533e398b30",
+      "name": "Orientar sobre a cidade",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [440, 100]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {"main": [[{"node": "Preparar consulta", "type": "main", "index": 0}]]},
+    "Preparar consulta": {"main": [[{"node": "Consultar OpenWeather", "type": "main", "index": 0}]]},
+    "Consultar OpenWeather": {"main": [[{"node": "Validar e formatar resposta", "type": "main", "index": 0}]]},
+    "Validar e formatar resposta": {"main": [[{"node": "Cidade encontrada?", "type": "main", "index": 0}]]},
+    "Cidade encontrada?": {"main": [[{"node": "Enviar temperatura", "type": "main", "index": 0}], [{"node": "Orientar sobre a cidade", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "ee2e8060-e7f9-4de8-9428-210d47aa3859",
+  "meta": {"templateCredsSetupCompleted": false},
+  "tags": []
+}
