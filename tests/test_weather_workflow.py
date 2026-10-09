@@ -12,7 +12,7 @@ from weather_logic import montar_resposta, normalizar_cidade  # noqa: E402
 
 class WeatherWorkflowTests(unittest.TestCase):
     def test_normaliza_cidade_com_acentos_e_espacos(self):
-        self.assertEqual(normalizar_cidade("  São   Paulo,SP,BR  "), "sao   paulo,sp,br")
+        self.assertEqual(normalizar_cidade("  São   Paulo,SP,BR  "), "sao paulo,sp,br")
 
     def test_formata_tres_respostas_de_cidades(self):
         exemplos = [
@@ -28,26 +28,48 @@ class WeatherWorkflowTests(unittest.TestCase):
                 self.assertIn(temperature, result["message"])
 
     def test_falha_de_cidade_e_resposta_incompleta_sao_amigaveis(self):
-        for payload in ({"cod": 404, "message": "city not found"}, {"cod": 200, "name": "X"}, None):
+        for payload in (
+            {"cod": 404, "message": "city not found"},
+            {"cod": 200, "name": "X"},
+            {"cod": 200, "name": "X", "main": {"temp": float("nan")}},
+            None,
+        ):
             with self.subTest(payload=payload):
                 result = montar_resposta(payload, "Cidade Inventada,ZZ,BR")
                 self.assertFalse(result["ok"])
                 self.assertIn("Cidade não encontrada", result["message"])
 
+    def test_arredondamento_corresponde_ao_workflow_inclusive_com_frio(self):
+        positive = montar_resposta(
+            {"cod": 200, "name": "Manaus", "main": {"temp": 24.5}}, "Manaus,AM,BR"
+        )
+        negative = montar_resposta(
+            {"cod": 200, "name": "Curitiba", "main": {"temp": -1.5}}, "Curitiba,PR,BR"
+        )
+
+        self.assertIn("25°C", positive["message"])
+        self.assertIn("-1°C", negative["message"])
+
     def test_exportacao_n8n_tem_gatilho_http_seguro_e_duas_respostas(self):
         workflow_path = ROOT / "workflow-chatbot-telegram.json"
         workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+        self.assertRegex(workflow.get("id", ""), r"^[0-9a-f-]{36}$")
         nodes = {node["name"]: node for node in workflow["nodes"]}
         self.assertEqual(nodes["Telegram Trigger"]["type"], "n8n-nodes-base.telegramTrigger")
         self.assertEqual(nodes["Consultar OpenWeather"]["parameters"]["url"], "https://api.openweathermap.org/data/2.5/weather")
         query = nodes["Consultar OpenWeather"]["parameters"]["queryParameters"]["parameters"]
         self.assertIn({"name": "appid", "value": "={{ $env.OPENWEATHER_API_KEY }}"}, query)
         self.assertEqual(nodes["Preparar consulta"]["parameters"]["assignments"]["assignments"][0]["name"], "queue")
+        queue_expression = nodes["Preparar consulta"]["parameters"]["assignments"]["assignments"][0]["value"]
+        self.assertIn(r"replace(/\s+/g, ' ')", queue_expression)
+        self.assertIn("normalize('NFD')", queue_expression)
+        self.assertIn("toLowerCase()", queue_expression)
         self.assertIn("Enviar temperatura", workflow["connections"]["Cidade encontrada?"]["main"][0][0]["node"])
         self.assertIn("Orientar sobre a cidade", workflow["connections"]["Cidade encontrada?"]["main"][1][0]["node"])
         serialized = json.dumps(workflow)
         self.assertNotIn("TELEGRAM_BOT_TOKEN", serialized)
         self.assertNotIn("OPENWEATHER_API_KEY=", serialized)
+        self.assertNotIn("sk-", serialized)
 
 
 if __name__ == "__main__":

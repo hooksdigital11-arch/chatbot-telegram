@@ -1,5 +1,6 @@
 {
   "name": "Bot de Clima no Telegram",
+  "id": "e26bb032-1dd3-4c7d-8cbe-164f36c54597",
   "nodes": [
     {
       "parameters": {
@@ -19,7 +20,7 @@
             {
               "id": "2d486d1f-01e4-45c7-93d7-c198b4de6831",
               "name": "queue",
-              "value": "={{ ($json.message.text || '').trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase() }}",
+              "value": "={{ ($json.message.text || '').trim().replace(/\\s+/g, ' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase() }}",
               "type": "string"
             }
           ]

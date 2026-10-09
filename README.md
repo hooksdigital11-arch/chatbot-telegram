@@ -1,41 +1,36 @@
 # Bot de clima no Telegram com n8n
 
-Workflow importável que recebe o nome de uma cidade no Telegram, consulta a API atual do OpenWeather e devolve a temperatura em Celsius. O fluxo valida a resposta antes de formatá-la e orienta o usuário quando a consulta falha.
+Workflow importável que recebe uma mensagem de texto, normaliza o nome da cidade, consulta a API OpenWeather e responde com a temperatura em Celsius. Respostas HTTP inválidas, cidades não encontradas e campos incompletos seguem um caminho de erro com orientação de formato.
 
-## Arquivos
+## Requisitos
 
-- `workflow-chatbot-telegram.json`: exportação para importar no n8n.
-- `weather_logic.py`: funções puras usadas para validar e testar os exemplos sem credenciais.
+- Uma instância n8n compatível com os nós Telegram, HTTP Request, Code, If e Edit Fields/Set.
+- Um bot criado pelo BotFather e uma credencial **Telegram API** configurada no n8n.
+- Uma chave OpenWeather configurada no ambiente do n8n como `OPENWEATHER_API_KEY`.
 
-## Configuração
+## Importar e configurar
 
-1. Crie um bot no Telegram pelo BotFather e guarde o token em `TELEGRAM_BOT_TOKEN` no ambiente seguro usado para provisionar sua instância. No n8n, adicione uma credencial **Telegram API** usando esse token; o token fica armazenado na credencial criptografada, não no workflow.
-2. Crie uma chave de API no OpenWeather e configure `OPENWEATHER_API_KEY` nas variáveis de ambiente do n8n.
-3. Reinicie o n8n para carregar a variável, importe `workflow-chatbot-telegram.json` e selecione a credencial Telegram nos nós **Telegram Trigger**, **Enviar temperatura** e **Orientar sobre a cidade**.
-4. Ative o workflow e envie ao bot uma cidade, por exemplo `São Paulo,SP,BR`.
+1. Baixe ou clone este repositório.
+2. No n8n, importe `workflow-chatbot-telegram.json`.
+3. Selecione sua credencial Telegram API nos nós **Telegram Trigger**, **Enviar temperatura** e **Orientar sobre a cidade**.
+4. Configure `OPENWEATHER_API_KEY` no ambiente do servidor n8n e reinicie a instância para carregar a variável.
+5. Publique/ative o workflow e envie uma cidade ao bot, por exemplo `São Paulo, SP, BR`.
 
-O campo `appid` é lido de `{{$env.OPENWEATHER_API_KEY}}`. `TELEGRAM_BOT_TOKEN` é usado na configuração da credencial Telegram, não como campo do workflow. Nenhuma chave ou token real está incluído nos arquivos.
+O nó HTTP usa `={{ $env.OPENWEATHER_API_KEY }}` para ler a chave. Em n8n self-hosted, a configuração padrão permite acesso a variáveis de ambiente em expressões (`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`). Se a instância tiver bloqueado esse acesso, configure a integração de acordo com a política do administrador antes de ativar o workflow. O token Telegram fica somente na credencial criptografada do n8n. Nenhum token ou chave real é salvo no JSON ou neste README.
 
-## Exemplos de resposta
+## Comportamento esperado
 
-Consulta bem-sucedida:
+- Remove espaços duplicados, acentos e diferenças entre maiúsculas/minúsculas antes de enviar a cidade como `queue`.
+- Consulta `https://api.openweathermap.org/data/2.5/weather` com unidades métricas e idioma português do Brasil.
+- Responde com o nome da cidade e temperatura arredondada em Celsius.
+- Em caso de cidade inválida, erro HTTP ou resposta incompleta, responde: `❌ Cidade não encontrada. Use o formato Cidade,UF,BR (ex.: São Paulo,SP,BR).`
 
-```text
-🌤️ A temperatura em São Paulo é de 24°C.
-```
+## Testes
 
-Cidade inválida, falha HTTP ou resposta incompleta:
-
-```text
-❌ Cidade não encontrada. Use o formato Cidade,UF,BR (ex.: São Paulo,SP,BR).
-```
-
-## Testes locais
-
-Na raiz deste repositório, execute:
+Na pasta do projeto:
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-Os testes cobrem três cidades de exemplo, normalização de acentos, arredondamento, falha de cidade e a estrutura do workflow. Os testes locais validam a lógica Python e a estrutura do export. O teste ponta a ponta no Telegram/OpenWeather precisa de uma instância n8n e das credenciais configuradas.
+Os testes offline conferem normalização, respostas de São Paulo, Recife e Curitiba, arredondamento, falhas e os nós/conexões/variáveis esperados no arquivo de exportação. A exportação inclui o ID do workflow e foi importada por uma instalação isolada do CLI oficial do n8n. Um teste ponta a ponta no Telegram e OpenWeather precisa das credenciais e de uma instância n8n configuradas pelo proprietário da conta.

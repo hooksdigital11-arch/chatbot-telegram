@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import unicodedata
+import math
 from typing import Any
 
 
 def normalizar_cidade(texto: str) -> str:
     """Remove espaços extras, acentos e diferenças de caixa do texto recebido."""
+    texto = " ".join(texto.split())
     sem_acentos = "".join(
         caractere
-        for caractere in unicodedata.normalize("NFD", texto.strip())
+        for caractere in unicodedata.normalize("NFD", texto)
         if unicodedata.category(caractere) != "Mn"
     )
     return sem_acentos.lower()
@@ -29,11 +31,11 @@ def montar_resposta(dados: Any, texto_original: str) -> dict[str, Any]:
     except (KeyError, TypeError, ValueError):
         return {"ok": False, "message": erro}
 
-    if codigo != 200 or not cidade:
+    if codigo != 200 or not cidade or not math.isfinite(temperatura):
         return {"ok": False, "message": erro}
 
     return {
         "ok": True,
-        "message": f"🌤️ A temperatura em {cidade} é de {temperatura:.0f}°C.",
+        "message": f"🌤️ A temperatura em {cidade} é de {math.floor(temperatura + 0.5)}°C.",
         "consulta": normalizar_cidade(texto_original),
     }
