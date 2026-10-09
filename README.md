@@ -16,7 +16,7 @@ Workflow importável que recebe uma mensagem de texto, normaliza o nome da cidad
 4. Configure `OPENWEATHER_API_KEY` no ambiente do servidor n8n e reinicie a instância para carregar a variável.
 5. Publique/ative o workflow e envie uma cidade ao bot, por exemplo `São Paulo, SP, BR`.
 
-O nó HTTP usa `={{ $env.OPENWEATHER_API_KEY }}` para ler a chave. Em n8n self-hosted, a configuração padrão permite acesso a variáveis de ambiente em expressões (`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`). Se a instância tiver bloqueado esse acesso, configure a integração de acordo com a política do administrador antes de ativar o workflow. O token Telegram fica somente na credencial criptografada do n8n. Nenhum token ou chave real é salvo no JSON ou neste README.
+O nó HTTP usa `={{ $env.OPENWEATHER_API_KEY }}` para ler a chave. O acesso a `$env` depende da versão e da configuração da instância. Algumas instalações self-hosted usam `N8N_BLOCK_ENV_ACCESS_IN_NODE` para controlar esse acesso; desativar essa proteção pode expor variáveis de ambiente a expressões de workflows. Não altere essa configuração em uma instância compartilhada ou de produção só para executar este projeto. Para avaliação, prefira uma instância isolada com apenas `OPENWEATHER_API_KEY` disponível, seguindo a política do administrador. O token Telegram fica somente na credencial criptografada do n8n. Nenhum token ou chave real é salvo no JSON ou neste README.
 
 ## Comportamento esperado
 
