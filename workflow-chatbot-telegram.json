@@ -57,7 +57,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const response = $input.first()?.json ?? {};\nconst erro = '❌ Cidade não encontrada. Use o formato Cidade,UF,BR (ex.: São Paulo,SP,BR).';\nlet ok = false;\nlet message = erro;\nconst code = Number(response.cod ?? response.statusCode ?? 200);\nconst temp = Number(response.main?.temp);\nconst city = String(response.name ?? '').trim();\nif (!response.error && code === 200 && city && Number.isFinite(temp)) {\n  ok = true;\n  message = `🌤️ A temperatura em ${city} é de ${Math.round(temp)}°C.`;\n}\nreturn [{ json: { ok, message } }];"
+        "jsCode": "const response = $input.first()?.json ?? {};\nconst erro = '❌ Cidade não encontrada. Use o formato Cidade,UF,BR (ex.: São Paulo,SP,BR).';\nlet ok = false;\nlet message = erro;\nconst code = Number(response.cod ?? response.statusCode ?? 200);\nconst rawTemp = response.main?.temp;\nconst hasTemp = typeof rawTemp === 'number' || (typeof rawTemp === 'string' && rawTemp.trim() !== '');\nconst temp = hasTemp ? Number(rawTemp) : Number.NaN;\nconst city = String(response.name ?? '').trim();\nif (!response.error && code === 200 && city && Number.isFinite(temp)) {\n  ok = true;\n  message = `🌤️ A temperatura em ${city} é de ${Math.round(temp)}°C.`;\n}\nreturn [{ json: { ok, message } }];"
       },
       "id": "f95549d4-aa60-4b89-9bce-c8d76cfef6f4",
       "name": "Validar e formatar resposta",

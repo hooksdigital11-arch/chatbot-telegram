@@ -34,6 +34,17 @@ test('o Code node encaminha respostas inválidas e temperaturas não finitas par
   }
 });
 
+test('o Code node rejeita temperatura ausente, nula ou vazia, mas aceita zero', () => {
+  for (const rawTemp of [undefined, null, '', '   ']) {
+    const result = executeCode({ cod: 200, name: 'Recife', main: { temp: rawTemp } });
+    assert.equal(result.ok, false, `temperatura inválida: ${String(rawTemp)}`);
+  }
+
+  const zero = executeCode({ cod: 200, name: 'Recife', main: { temp: 0 } });
+  assert.equal(zero.ok, true);
+  assert.match(zero.message, /0°C/);
+});
+
 test('a expressão que cria queue normaliza acentos e espaços repetidos', () => {
   const expressionBody = queueExpression.slice(3, -2);
   const normalize = new Function('$json', `return (${expressionBody});`);
