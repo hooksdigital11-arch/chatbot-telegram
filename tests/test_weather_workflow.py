@@ -32,6 +32,8 @@ class WeatherWorkflowTests(unittest.TestCase):
             {"cod": 404, "message": "city not found"},
             {"cod": 200, "name": "X"},
             {"cod": 200, "name": "X", "main": {"temp": float("nan")}},
+            {"cod": 200, "name": "X", "main": {"temp": None}},
+            {"cod": 200, "name": "X", "main": {"temp": ""}},
             None,
         ):
             with self.subTest(payload=payload):
